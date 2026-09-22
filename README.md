@@ -3,7 +3,9 @@
 > 국제유가가 원/달러 환율에 주는 영향을 통계적으로 검정하고,
 > 확인된 관계로 **유가 시나리오별 환율 위험 범위**와 **헤지 효과**를 보여주는 대시보드
 
-**라이브 데모:** _(배포 후 링크 추가)_
+**라이브 데모:** https://oil-fx-dashboard-9kwlwhhrwz8bejyxg9xqgg.streamlit.app/
+
+> 접속자가 없으면 Streamlit Cloud가 앱을 잠재웁니다. "Yes, get this app back up!"을 누르면 1분 안에 다시 켜집니다.
 
 ![dashboard](output/dashboard_tab1.png)
 
