@@ -3,7 +3,7 @@
 모형:  r_fx,t = β_t · r_oil,t + ε_t,   ε_t ~ N(0, σ_t²)
 - β_t, σ_t 는 t-1 일까지의 데이터로만 추정한다 (미래 정보 차단).
 - 절편은 두지 않는다. 일별 환율 추세(드리프트)는 잡음 대비 너무 작아 추정 오차만 키운다.
-- 3단계 결론(동시점 관계, 선행 예측력 없음)에 따라 '조건부' 예측: 유가 경로를 주면 환율 분포를 낸다.
+- 3단계 결론(동시점 관계, 선행 예측력 없음)에 따라 조건부 시나리오: 유가 경로를 가정으로 주면 환율 분포를 낸다 (유가 자체는 예측하지 않음).
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from scipy import stats
 from .explore import FX, OIL
 
 BREAK_DATE = "2025-04-29"      # 3단계 QLR(2020~ 표본)이 찾은 변화 시점
-EWMA_HALFLIFE = 120            # 거래일. 사전에 정한 값 (반년), 민감도는 halflife_sensitivity 로 확인
+EWMA_HALFLIFE = 120            # 거래일. 사전에 정한 값 (반년), 반감기 민감도는 run_model.py 에서 확인
 MIN_OBS = 120
 
 METHODS = {
@@ -105,7 +105,7 @@ def scenario(spot: float, beta: float, sigma_d: float, oil_change: float, days: 
 
 
 def shock_backtest(px: pd.DataFrame, est: pd.DataFrame, start: str, end: str) -> dict:
-    """과거 충격 구간: 당시(시작 전날) β·σ 로 낸 예측 vs 실제 환율 변화."""
+    """과거 충격 구간: 충격 시작일까지의 β·σ 로 계산한 범위 vs 실제 환율 변화."""
     seg = px.loc[start:end, [OIL, FX]].dropna()
     days = len(seg) - 1
     oil_chg = seg[OIL].iloc[-1] / seg[OIL].iloc[0] - 1

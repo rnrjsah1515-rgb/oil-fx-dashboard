@@ -10,7 +10,7 @@ from src import data, hedge, model
 from src.config import SHOCKS
 from src.explore import FX, OIL
 
-st.set_page_config(page_title="유가–환율 시나리오", page_icon="🛢️", layout="wide")
+st.set_page_config(page_title="유가–환율 민감도 분석", page_icon="🛢️", layout="wide")
 
 # dataviz 참조 팔레트
 C1, C2, INK2 = "#2a78d6", "#eb6834", "#8a8984"
@@ -64,9 +64,10 @@ sc = model.scenario(spot, e_now.beta, e_now.sigma, oil_chg, days)
 end = sc.iloc[-1]
 
 # ── 헤더 ──────────────────────────────────────────────────────────────────
-st.title("유가 시나리오별 원/달러 환율 위험 범위")
-st.caption("Brent 유가 변화가 원/달러 환율에 주는 영향(β)을 시변 회귀로 추정하고, 유가 시나리오에 따른 환율 분포를 보여줍니다. "
-           "유가가 환율을 *선행*하지는 않으므로(그레인저 R² 0.1%) 이 화면은 예언이 아닌 **조건부 시나리오**입니다.")
+st.title("유가 변화에 대한 원/달러 환율 민감도 분석")
+st.caption("유가로 환율을 예측할 수 있는지 검증한 결과, **예측력은 없었습니다** (전일 유가의 설명력 0.1%). "
+           "이 화면은 유가도 환율도 예측하지 않습니다. 사용자가 유가 경로를 **가정**하면, 과거에 유가와 환율이 "
+           "같은 날 함께 움직인 정도(β)를 적용해 환율 범위를 계산하는 **민감도·스트레스 분석 도구**입니다.")
 
 k = st.columns(4)
 k[0].metric("Brent (달러/배럴)", f"{oil_now:,.1f}", f"{oil_now / daily[OIL].iloc[-21] - 1:+.1%} (1개월)",
@@ -76,7 +77,7 @@ k[2].metric("현재 β", f"{e_now.beta:+.3f}", "유가↑ → 원화 약세" if 
             delta_color="off")
 k[3].metric("환율 일간 변동성 (σ)", f"{e_now.sigma:.2%}")
 
-tab1, tab2 = st.tabs(["시나리오 예측", "헤지 계산기"])
+tab1, tab2 = st.tabs(["시나리오 분석", "헤지 계산기"])
 
 # ── 탭 1: 시나리오 ────────────────────────────────────────────────────────
 with tab1:
@@ -90,7 +91,7 @@ with tab1:
     fig.add_trace(go.Scatter(x=hist.index, y=hist, name="실제 원/달러", line=dict(color=INK2, width=1.5),
                              hovertemplate="%{x|%Y-%m-%d}<br>%{y:,.1f}원<extra></extra>"))
     fig.add_trace(go.Scatter(
-        x=fdates, y=sc.center, name="중심 경로", line=dict(color=C1, width=2.5),
+        x=fdates, y=sc.center, name="조건부 중심", line=dict(color=C1, width=2.5),
         customdata=np.c_[sc.oil_cum * 100, sc.lo95, sc.hi95],
         hovertemplate="%{x|%Y-%m-%d}<br>중심 %{y:,.1f}원<br>95%: %{customdata[1]:,.0f} ~ %{customdata[2]:,.0f}"
                       "<br>누적 유가 %{customdata[0]:+.1f}%<extra></extra>"))
@@ -107,9 +108,8 @@ with tab1:
     m[2].metric("95% 구간", f"{end.lo95:,.0f} ~ {end.hi95:,.0f}")
     m[3].metric("불확실성 / 유가 효과", f"{(end.hi95 - end.center) / max(abs(effect), 0.01):,.1f}배",
                 help="95% 구간 반폭 ÷ |유가 효과|. 1보다 크면 유가 외 요인의 변동이 더 크다는 뜻입니다.")
-    st.info(f"유가가 {oil_chg:+.0%} 움직일 때 환율 중심은 **{effect:+,.0f}원** 움직이지만, 같은 기간 환율 자체의 "
-            f"불확실성은 **±{end.hi95 - end.center:,.0f}원**(95%)입니다. 유가 전망만으로 환율 방향에 베팅하기보다 "
-            f"**범위를 관리(헤지)** 해야 하는 이유입니다.")
+    st.info(f"유가가 가정대로 {oil_chg:+.0%} 움직여도 과거 관계로 설명되는 환율 변화는 **{effect:+,.0f}원**이고, "
+            f"설명되지 않는 변동은 **±{end.hi95 - end.center:,.0f}원**(95%)입니다. 유가 가정만으로는 환율 방향을 판단하기 어렵습니다.")
 
     st.subheader("과거 충격: 당시 모형 vs 실제")
     rows = []
@@ -123,7 +123,7 @@ with tab1:
                      "모형 95% 구간": f"{b['lo95']:+.1%} ~ {b['hi95']:+.1%}" if has else "–",
                      "구간 안": ("✅" if b["lo95"] <= b["fx_chg"] <= b["hi95"] else "❌") if has else "–"})
     st.dataframe(pd.DataFrame(rows).set_index("충격"), width="stretch")
-    st.caption("각 충격 시작일까지의 데이터만으로 추정한 β·σ 로 예측했습니다 (미래 정보 미사용).")
+    st.caption("각 충격 시작일까지의 데이터만으로 추정한 β·σ 로 계산했습니다 (미래 정보 미사용). 구간이 넓어 4건 모두 안에 드는 것은 강한 증거가 아닙니다.")
     st.subheader("β 추정 방식에 따른 차이")
     rows = []
     for key, lab in model.METHODS.items():
